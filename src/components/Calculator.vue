@@ -1,75 +1,117 @@
 <template>
     <div class="container">
-        <div class="card">
-            <div class="card-header">
-                Loan Interest Calculator
+        <div class="card border-0">
+            <div class="card-header bg-white border-0">
+                <h2>Loan Interest Calculator</h2> 
             </div>
             <div class="card-body">
-                <h5 class="card-title">Loan Interest Calculator</h5>
-            </div>
-            <div class="form-group">
-                <label>Select Month</label>
-                <Datepicker input-class="form-control" :minimumView="'month'" :maximumView="'year'"
-                :initialView="'year'" v-model="currentMonth" :format="customFormatter"></Datepicker>
-                <label>Loan Balance</label>
-                <input type="number" class="form-control" v-model="loanBalance">
-                <label>PA</label>
-                <div class="input-group">
-                    <input type="number" step="0.01" class="form-control" v-model="percentageAunual">
-                    <div class="input-group-append">
-                        <span class="input-group-text">%</span>
+                <div class="form-group">
+                    <div class="mb-4">
+                        <p v-show="currentMonth">Selected Month: <b class="text-primary" @click="goToStep('showChooseMonth')">{{ formatedCurrentMonth }}</b></p>
+                        <p v-show="loanBalance">Beginning Loan Balance: <b class="text-primary" @click="goToStep('showInputLoanBalance')">${{ loanBalance }}</b></p>
+                        <p v-show="percentageAunual">Interest Percentage Aunual: <b class="text-primary" @click="goToStep('showInputPA')">{{ percentageAunual }}%</b></p>
+                    </div>
+                    <div v-show="steps.showChooseMonth">
+                        <p class="font-weight-bold mb-0">Select Month</p>
+                        <Datepicker input-class="form-control bg-white text-center mb-4" :minimumView="'month'" :maximumView="'year'"
+                        :initialView="'year'" v-model="currentMonth" :format="customFormatter"></Datepicker>
+                        <button class="btn btn-primary btn-block" :disabled="!currentMonth" @click="goToStep('showInputLoanBalance')">Next</button>
+                    </div>
+                    <div v-show="steps.showInputLoanBalance">
+                        <p class="font-weight-bold mb-0">Loan Balance</p>
+                        <input type="number" class="form-control mb-4" v-model="loanBalance">
+                        <button class="btn btn-primary btn-block" :disabled="!loanBalance" @click="goToStep('showInputPA')">Next</button>
+                    </div>
+                    <div v-show="steps.showInputPA">
+                        <p class="font-weight-bold mb-0">PA</p>
+                        <div class="input-group mb-4">
+                            <input type="number" step="0.01" class="form-control" v-model="percentageAunual">
+                            <div class="input-group-append">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block" @click="goToStep('showAddCredits')">Next</button>
+                    </div>
+                    <div v-show="steps.showAddCredits">
+                        <p class="font-weight-bold mb-0">When</p>
+                        <Datepicker input-class="form-control bg-white text-center mb-4"
+                        v-model="newCreditDate" :disabled-dates="currentDisabledDates"></Datepicker>
+                        <p class="font-weight-bold mb-0">Credit</p>
+                        <input type="number" class="form-control mb-4" step="0.01" v-model="newCreditAmount">
+                        <button class="btn btn-primary mb-4 py-0" @click="addCredit">Add</button>
+                        <div>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">date</th>
+                                    <th scope="col">credit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="(item, index) in sortedCredits"
+                                        :key="index"
+                                    >
+                                        <th scope="row">{{ index+1 }}</th>
+                                        <td>{{ item.displayDate }}</td>
+                                        <td>{{ item.amount }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-primary btn-block btn-lg" @click="calculate">Calculate</button>
+                    </div>
+                    <div v-show="steps.showResult">
+                        <p><span>Total Interest</span> $<b>{{ loanInterest }}</b></p>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">Previous Balance</th>
+                                    <th scope="col">Interest</th>
+                                    <th scope="col">Current Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(item, index) in interestArr"
+                                    :key="index"
+                                >
+                                    <th scope="row">{{ item.date }}</th>
+                                    <td>{{ item.previous_balance }}</td>
+                                    <td>{{ item.interest }}</td>
+                                    <td>{{ item.current_balance }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <label>Credit</label>
-                <input type="number" class="form-control" step="0.01" v-model="newCreditAmount">
-                <label>When</label>
-                <Datepicker input-class="form-control"
-                v-model="newCreditDate" :disabled-dates="currentDisabledDates"></Datepicker>
-                <button @click="addCredit">Add</button>
-                <div>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">date</th>
-                            <th scope="col">credit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="(item, index) in sortedCredits"
-                                :key="index"
-                            >
-                                <th scope="row">{{ index }}</th>
-                                <td>{{ item.displayDate }}</td>
-                                <td>{{ item.amount }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <button class="btn btn-primary" @click="calculate">Calculate</button>
-                <p><span>Total</span><b>{{ loanInterest }}</b></p>
             </div>
         </div>
     </div>
 </template>
 <script>
 import Datepicker from 'vuejs-datepicker';
-import moment from 'moment'
-// import {setData} from '../data.js';
+import moment from 'moment';
 export default {
     data: function () {
         return {
             steps: {
-                chooseMonth: true,
+                showChooseMonth: true,
+                showInputLoanBalance: false,
+                showInputPA: false,
+                showAddCredits: false,
+                showResult: false
             },
             credits: [],
             newCreditAmount: null,
-            newCreditDate: new Date(moment(this.currentMonth).startOf('month')),
+            newCreditDate: null,
             currentMonth: new Date(),
             loanBalance: "",
             percentageAunual: "",
-            loanInterest: ""
+            loanInterest: "",
+            interestArr: []
         }
     },
     watch: {
@@ -78,9 +120,11 @@ export default {
         }
     },
     computed: {
+        formatedCurrentMonth: function () {
+            return moment(this.currentMonth).format('MMMM YYYY')
+        },
         sortedCredits: function () {
             let target = [...this.credits];
-            //return target;
             return target.sort((a, b) => a.date - b.date); 
         },
         currentDisabledTo: function () {
@@ -104,9 +148,7 @@ export default {
             return 365
         },
         percentagePerDay: function () {
-            let vm = this;
-            console.log("Days: "+vm.daysInYear);
-            return ((parseFloat(vm.percentageAunual) / 100) / vm.daysInYear)
+            return parseFloat(this.percentageAunual / 100 / this.daysInYear);
         },
     },
     components: {
@@ -128,32 +170,40 @@ export default {
         customFormatter: function (date) {
             return moment(date).format('MMMM YYYY');
         },
+        isSameDay: function (d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+        },
         calculate: function () {
             let vm = this;
-            let balance = vm.loanBalance;
+            vm.interestArr = [];
+            let balance = parseFloat(vm.loanBalance);
             let day = vm.currentDisabledTo;
             let total = 0;
             while (day <= vm.currentDisabledFrom) {
-                console.log("Balance: "+balance);
-                console.log(vm.percentagePerDay);
-                let interest = balance * vm.percentagePerDay;
-                console.log(interest);
-                total = parseFloat(total) + parseFloat(interest);
-                balance = parseFloat(balance) + parseFloat(interest);
-                for (let i = 0; i < vm.sortedCredits; i++) {
-                    if (vm.sortedCredits[i].date == day) {
+                let item = {};
+                item.date = moment(day).format('Do MMMM YYYY');
+                item.previous_balance = balance;
+                let interest =  balance * vm.percentagePerDay;
+                item.interest = interest;
+                total = total + interest;
+                for (let i = 0; i < vm.sortedCredits.length; i++) {
+                    if (vm.isSameDay(vm.sortedCredits[i].date, day)) {
                         balance -= vm.sortedCredits[i].amount;
                     }
                 }
+                item.current_balance = balance;
+                vm.interestArr.push(item);
                 day = new Date(moment(day).add(1, 'd'));
-                console.log(day);
-                console.log(total);
             }
             vm.loanInterest = total;
+            vm.goToStep("showResult");
         }
-    },
-    mounted: function () {
-        // this.credits = setData;
     }
 }
 </script>
+<style>
+    .vdp-datepicker__calendar {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+</style>
