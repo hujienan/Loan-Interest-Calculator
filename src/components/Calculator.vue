@@ -19,13 +19,18 @@
                     </div>
                     <div v-show="steps.showInputLoanBalance">
                         <p class="font-weight-bold mb-0">Loan Balance</p>
-                        <input type="number" class="form-control mb-4" v-model="loanBalance">
+                        <div class="input-group mb-4">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" class="form-control text-center" v-model="loanBalance">
+                        </div>
                         <button class="btn btn-primary btn-block" :disabled="!loanBalance" @click="goToStep('showInputPA')">Next</button>
                     </div>
                     <div v-show="steps.showInputPA">
                         <p class="font-weight-bold mb-0">PA</p>
                         <div class="input-group mb-4">
-                            <input type="number" step="0.01" class="form-control" v-model="percentageAunual">
+                            <input type="number" step="0.01" class="form-control text-center" v-model="percentageAunual">
                             <div class="input-group-append">
                                 <span class="input-group-text">%</span>
                             </div>
@@ -37,15 +42,16 @@
                         <Datepicker input-class="form-control bg-white text-center mb-4"
                         v-model="newCreditDate" :disabled-dates="currentDisabledDates"></Datepicker>
                         <p class="font-weight-bold mb-0">Credit</p>
-                        <input type="number" class="form-control mb-4" step="0.01" v-model="newCreditAmount">
-                        <button class="btn btn-primary mb-4 py-0" @click="addCredit">Add</button>
+                        <input type="number" class="form-control mb-4 text-center" step="0.01" v-model="newCreditAmount">
+                        <button class="btn btn-primary mb-4 py-0" :disabled="!newCreditAmount || !newCreditDate" @click="addCredit">Add</button>
                         <div>
                             <table class="table">
                                 <thead>
                                     <tr>
-                                    <th scope="col">#</th>
-                                    <th scope="col">date</th>
-                                    <th scope="col">credit</th>
+                                        <th scope="col">#</th>
+                                        <th scope="col">date</th>
+                                        <th scope="col">credit</th>
+                                        <th scope="col"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -56,6 +62,7 @@
                                         <th scope="row">{{ index+1 }}</th>
                                         <td>{{ item.displayDate }}</td>
                                         <td>{{ item.amount }}</td>
+                                        <td @click="deleteCredit(item.id)"><button type="button" class="btn btn-outline-primary py-0">X</button></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -94,6 +101,7 @@
 <script>
 import Datepicker from 'vuejs-datepicker';
 import moment from 'moment';
+let id = 0;
 export default {
     data: function () {
         return {
@@ -161,11 +169,17 @@ export default {
         addCredit: function () {
             let vm = this;
             vm.credits.push({
+                id: id++,
                 amount: vm.newCreditAmount,
                 date: vm.newCreditDate,
                 displayDate: moment(vm.newCreditDate).format('D MMMM YYYY')
             });
             vm.newCreditAmount = "";
+        },
+        deleteCredit: function (itemId) {
+            let vm = this;
+            let index = vm.credits.findIndex(item => item.id == itemId);
+            vm.credits.splice(index, 1);
         },
         customFormatter: function (date) {
             return moment(date).format('MMMM YYYY');
@@ -181,9 +195,9 @@ export default {
             let total = 0;
             while (day <= vm.currentDisabledFrom) {
                 let item = {};
-                item.date = moment(day).format('Do MMMM YYYY');
+                item.date = moment(day).format('D MMM YYYY');
                 item.previous_balance = balance;
-                let interest =  balance * vm.percentagePerDay;
+                let interest =  parseFloat((balance * vm.percentagePerDay).toFixed(2));
                 item.interest = interest;
                 total = total + interest;
                 for (let i = 0; i < vm.sortedCredits.length; i++) {
@@ -195,7 +209,7 @@ export default {
                 vm.interestArr.push(item);
                 day = new Date(moment(day).add(1, 'd'));
             }
-            vm.loanInterest = total;
+            vm.loanInterest = total.toFixed(2);
             vm.goToStep("showResult");
         }
     }
