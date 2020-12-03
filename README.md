@@ -1,5 +1,8 @@
 # loan-interest-calculator
 
+## [DEMO](https://priceless-heisenberg-207f63.netlify.app/)
+
+
 ## Project setup
 ```
 npm install
